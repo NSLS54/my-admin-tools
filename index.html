@@ -32,15 +32,27 @@
       </div>
 
       <div id="total-card" class="total-card">
-        <span class="total-label">총 자산</span>
-        <strong id="total-amount">0원</strong>
+        <div class="total-main">
+          <span class="total-label">총 자산</span>
+          <strong id="total-amount">0원</strong>
+        </div>
+        <div id="total-delta" class="total-delta hidden"></div>
       </div>
+
+      <button id="copy-prev-btn" class="btn btn-secondary btn-block hidden">📋 이전 월 데이터 불러오기</button>
 
       <div id="category-list" class="category-list"><!-- JS 렌더링 --></div>
 
       <div class="action-row">
         <button id="save-btn" class="btn btn-primary">💾 저장</button>
         <button id="edit-btn" class="btn btn-secondary hidden">✏️ 수정 (비밀번호 필요)</button>
+      </div>
+
+      <div class="tools-row">
+        <button id="export-btn" class="tool-btn" title="자산 데이터를 JSON 파일로 백업">⬇️ 내보내기</button>
+        <button id="import-btn" class="tool-btn" title="백업한 JSON 파일 불러오기">⬆️ 가져오기</button>
+        <button id="pw-change-btn" class="tool-btn" title="수정용 비밀번호 변경">🔑 비밀번호 변경</button>
+        <input type="file" id="import-file" accept=".json,application/json" class="hidden">
       </div>
     </section>
 

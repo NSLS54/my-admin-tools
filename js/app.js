@@ -82,7 +82,19 @@
     if (catKey === 'realestate') {
       return item.dealType === '매매' ? (item.price || 0) : (item.deposit || 0);
     }
+    if (catKey === 'stock' || catKey === 'crypto') {
+      // 현재 평가금액이 입력되어 있으면 평가금액, 아니면 매입금액 기준
+      return item.currentValue || item.amount || 0;
+    }
     return item.amount || 0;
+  }
+
+  // 직전 월(데이터가 있는 가장 가까운 이전 월) 키
+  function prevMonthKey(m) {
+    const keys = Object.keys(data.months).filter(function (k) {
+      return k < m && monthTotal(data.months[k]) > 0;
+    }).sort();
+    return keys.length ? keys[keys.length - 1] : null;
   }
 
   function catTotal(monthData, catKey) {
@@ -305,6 +317,8 @@
     } else if (catKey === 'stock' || catKey === 'crypto') {
       html += textField('f-name', '종목명', item.name, catKey === 'stock' ? '예: 삼성전자' : '예: 비트코인');
       html += moneyField('f-amount', '매입금액 (원)', item.amount);
+      html += moneyField('f-current', '현재 평가금액 (원, 선택)', item.currentValue);
+      html += '<span class="form-hint">평가금액을 입력하면 수익률이 표시되고 자산 가치에 반영됩니다.</span>';
       itemForm.innerHTML = html;
       bindMoneyInputs();
 
@@ -382,6 +396,8 @@
     } else if (catKey === 'stock' || catKey === 'crypto') {
       item.amount = readMoney('f-amount');
       if (!item.amount) { alert('매입금액을 입력하세요.'); return; }
+      const cv = readMoney('f-current');
+      if (cv) item.currentValue = cv;
     } else if (catKey === 'deposit') {
       item.depositType = readText('f-deptype');
       item.amount = readMoney('f-amount');
@@ -415,6 +431,8 @@
   const lockBadge = document.getElementById('lock-badge');
   const saveBtn = document.getElementById('save-btn');
   const editBtn = document.getElementById('edit-btn');
+  const totalDeltaEl = document.getElementById('total-delta');
+  const copyPrevBtn = document.getElementById('copy-prev-btn');
 
   monthInput.value = currentMonth;
   monthInput.addEventListener('change', function () {
@@ -431,7 +449,14 @@
       if (item.dealType === '월세' && item.monthlyRent) t += ' · 월세 ' + formatKRW(item.monthlyRent);
       return t;
     }
-    if (catKey === 'stock' || catKey === 'crypto') return '매입금액';
+    if (catKey === 'stock' || catKey === 'crypto') {
+      if (item.currentValue && item.amount) {
+        const pct = ((item.currentValue - item.amount) / item.amount) * 100;
+        return '매입 ' + formatKRW(item.amount) + ' · 수익률 ' +
+          (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      }
+      return '매입금액';
+    }
     if (catKey === 'deposit') {
       let t = item.depositType;
       if (item.monthlyPayment) t += ' · 월 ' + formatKRW(item.monthlyPayment);
@@ -446,11 +471,31 @@
   function renderLeftPanel() {
     const md = getMonth(currentMonth);
     const editable = isEditable(currentMonth);
+    const total = monthTotal(md);
 
-    totalAmountEl.textContent = formatKRW(monthTotal(md));
+    totalAmountEl.textContent = formatKRW(total);
     lockBadge.classList.toggle('hidden', !(md.saved && !editable));
     saveBtn.classList.toggle('hidden', !editable);
     editBtn.classList.toggle('hidden', editable);
+
+    // 전월 대비 증감
+    const prevKey = prevMonthKey(currentMonth);
+    if (prevKey && total > 0) {
+      const prevTotal = monthTotal(data.months[prevKey]);
+      const diff = total - prevTotal;
+      const pct = prevTotal ? (diff / prevTotal) * 100 : 0;
+      const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+      totalDeltaEl.textContent = '전월(' + prevKey.replace('-', '.') + ') 대비 ' + arrow + ' ' +
+        formatKRW(Math.abs(diff)) + ' (' + (diff >= 0 ? '+' : '') + pct.toFixed(1) + '%)';
+      totalDeltaEl.classList.remove('hidden');
+    } else {
+      totalDeltaEl.classList.add('hidden');
+    }
+
+    // 현재 월이 비어 있고 이전 월 데이터가 있으면 불러오기 버튼 표시
+    const isEmpty = CATEGORIES.every(function (c) { return md[c.key].length === 0; });
+    copyPrevBtn.classList.toggle('hidden', !(editable && isEmpty && prevKey));
+    if (prevKey) copyPrevBtn.textContent = '📋 이전 월(' + prevKey.replace('-', '.') + ') 데이터 불러오기';
 
     categoryList.innerHTML = CATEGORIES.map(function (cat) {
       const items = md[cat.key];
@@ -554,6 +599,114 @@
         pwInput.focus();
       }
     });
+  });
+
+  /* ───────── 이전 월 데이터 불러오기 ───────── */
+
+  copyPrevBtn.addEventListener('click', function () {
+    const prevKey = prevMonthKey(currentMonth);
+    if (!prevKey) return;
+    if (!confirm(prevKey.replace('-', '.') + ' 데이터를 ' + currentMonth.replace('-', '.') +
+        ' 입력값으로 복사하시겠습니까?\n복사 후 자유롭게 수정한 뒤 저장하면 됩니다.')) return;
+    const clone = JSON.parse(JSON.stringify(data.months[prevKey]));
+    clone.saved = false;
+    delete clone.savedAt;
+    data.months[currentMonth] = clone;
+    persist();
+    render();
+  });
+
+  /* ───────── 데이터 내보내기 / 가져오기 ───────── */
+
+  const importFileInput = document.getElementById('import-file');
+
+  document.getElementById('export-btn').addEventListener('click', function () {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    const d = new Date();
+    a.href = URL.createObjectURL(blob);
+    a.download = 'asset-data-' + d.getFullYear() +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('import-btn').addEventListener('click', function () {
+    // 저장된 데이터를 덮어쓰므로, 비밀번호가 설정돼 있으면 확인 후 진행
+    if (data.passwordHash) {
+      openPwModal('비밀번호 입력', '데이터를 가져오면 기존 데이터를 덮어씁니다. 비밀번호 4자리를 입력하세요.', function (pin) {
+        if (hashPin(pin) === data.passwordHash) {
+          closePwModal();
+          importFileInput.click();
+        } else {
+          pwError.textContent = '비밀번호가 올바르지 않습니다.';
+          pwError.classList.remove('hidden');
+          pwInput.value = '';
+          pwInput.focus();
+        }
+      });
+    } else {
+      importFileInput.click();
+    }
+  });
+
+  importFileInput.addEventListener('change', function () {
+    const file = importFileInput.files[0];
+    importFileInput.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== 'object' || typeof parsed.months !== 'object' || parsed.months === null) {
+          throw new Error('형식 오류');
+        }
+        if (!confirm('가져온 데이터로 현재 데이터를 완전히 교체합니다. 계속하시겠습니까?')) return;
+        data = { passwordHash: parsed.passwordHash || null, months: parsed.months };
+        Object.keys(data.months).forEach(function (m) {
+          const md = data.months[m];
+          CATEGORIES.forEach(function (c) { if (!Array.isArray(md[c.key])) md[c.key] = []; });
+        });
+        unlockedMonths.clear();
+        persist();
+        selectedCategory = null;
+        render();
+        alert('데이터를 가져왔습니다.');
+      } catch (e) {
+        alert('올바른 자산 데이터 파일이 아닙니다.');
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  /* ───────── 비밀번호 변경 ───────── */
+
+  document.getElementById('pw-change-btn').addEventListener('click', function () {
+    function setNewPin() {
+      openPwModal('새 비밀번호 설정', '새로 사용할 숫자 4자리 비밀번호를 입력하세요.', function (pin) {
+        data.passwordHash = hashPin(pin);
+        persist();
+        closePwModal();
+        alert('비밀번호가 변경되었습니다.');
+      });
+    }
+    if (data.passwordHash) {
+      openPwModal('현재 비밀번호 입력', '비밀번호를 변경하려면 현재 비밀번호 4자리를 입력하세요.', function (pin) {
+        if (hashPin(pin) === data.passwordHash) {
+          setNewPin();
+        } else {
+          pwError.textContent = '비밀번호가 올바르지 않습니다.';
+          pwError.classList.remove('hidden');
+          pwInput.value = '';
+          pwInput.focus();
+        }
+      });
+    } else {
+      setNewPin();
+    }
   });
 
   /* ───────── 중앙 패널: 도넛 차트 ───────── */

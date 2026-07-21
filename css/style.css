@@ -157,11 +157,32 @@ body {
   padding: 14px 16px;
   margin-bottom: 14px;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
 }
+.total-main { display: flex; align-items: baseline; justify-content: space-between; }
 .total-card .total-label { font-size: 0.85rem; opacity: 0.9; }
 .total-card strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.total-delta { font-size: 0.78rem; opacity: 0.95; font-variant-numeric: tabular-nums; }
+
+.btn-block { flex: none; width: 100%; margin-bottom: 12px; }
+
+.tools-row { display: flex; gap: 8px; margin-top: 10px; }
+.tool-btn {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.76rem;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-family: inherit;
+}
+.tool-btn:hover { background: var(--hover-bg); color: var(--text); }
+
+.profit-up { color: #2fa66a; font-weight: 600; }
+.profit-down { color: var(--danger); font-weight: 600; }
 
 .category-list { display: flex; flex-direction: column; gap: 10px; flex: 1; }
 
