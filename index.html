@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개인자산관리</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="logo">💰 개인자산관리</h1>
+    <div class="topbar-right">
+      <div id="clock" class="clock" aria-live="off">
+        <span id="clock-date"></span>
+        <span id="clock-time"></span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" title="밝게/어둡게 전환">🌙 어둡게</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ───────── 좌측 패널: 자산 구성 ───────── -->
+    <section class="panel panel-left">
+      <div class="panel-header">
+        <h2>자산 구성</h2>
+        <span id="lock-badge" class="lock-badge hidden">🔒 저장됨</span>
+      </div>
+
+      <div class="month-row">
+        <label for="month-input">입력 시점(월)</label>
+        <input type="month" id="month-input">
+      </div>
+
+      <div id="total-card" class="total-card">
+        <span class="total-label">총 자산</span>
+        <strong id="total-amount">0원</strong>
+      </div>
+
+      <div id="category-list" class="category-list"><!-- JS 렌더링 --></div>
+
+      <div class="action-row">
+        <button id="save-btn" class="btn btn-primary">💾 저장</button>
+        <button id="edit-btn" class="btn btn-secondary hidden">✏️ 수정 (비밀번호 필요)</button>
+      </div>
+    </section>
+
+    <!-- ───────── 중앙 패널: 상세 구성 (도넛) ───────── -->
+    <section class="panel panel-center">
+      <div class="panel-header">
+        <h2 id="donut-title">자산 상세 구성</h2>
+      </div>
+      <div id="donut-area" class="chart-area"><!-- JS 렌더링 --></div>
+      <div id="donut-legend" class="legend"><!-- JS 렌더링 --></div>
+    </section>
+
+    <!-- ───────── 우측 패널: 자산 추이 (막대) ───────── -->
+    <section class="panel panel-right">
+      <div class="panel-header">
+        <h2 id="bar-title">자산 추이</h2>
+      </div>
+      <div id="bar-area" class="chart-area chart-area-bar"><!-- JS 렌더링 --></div>
+      <div id="bar-legend" class="legend"><!-- JS 렌더링 --></div>
+    </section>
+  </main>
+
+  <!-- 비밀번호 모달 -->
+  <div id="pw-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3 id="pw-title">비밀번호 입력</h3>
+      <p id="pw-desc" class="pw-desc">숫자 4자리를 입력하세요.</p>
+      <input type="password" id="pw-input" inputmode="numeric" maxlength="4" pattern="\d{4}" autocomplete="off" placeholder="••••">
+      <p id="pw-error" class="pw-error hidden">비밀번호가 올바르지 않습니다.</p>
+      <div class="modal-actions">
+        <button id="pw-cancel" class="btn btn-secondary">취소</button>
+        <button id="pw-confirm" class="btn btn-primary">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 자산 항목 입력 모달 -->
+  <div id="item-modal" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3 id="item-modal-title">항목 추가</h3>
+      <div id="item-form" class="item-form"><!-- JS 렌더링 --></div>
+      <div class="modal-actions">
+        <button id="item-cancel" class="btn btn-secondary">취소</button>
+        <button id="item-save" class="btn btn-primary">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
